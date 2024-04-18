@@ -75,6 +75,9 @@ matchup_df <- raw_matchup_df %>%
          DEF_PLAYER_NAME = str_replace_all(DEF_PLAYER_NAME, "[^[:alnum:][:space:]]", ""))
 
 
+sum(raw_matchup_df %>% filter(OFF_PLAYER_ID == 1629027, game_id == '0042200111') %>% pull(MATCHUP_MIN))
+
+sum(raw_matchup_df %>% filter(DEF_PLAYER_ID == 1629027, game_id == '0042200111') %>% pull(MATCHUP_MIN))
 
 saveRDS(matchup_df, "matchups.rds")
 
@@ -115,6 +118,21 @@ gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_rec
 
 
 
-write.csv(matchup_df, "Data/matchups.csv")
+df <- matchup_df %>% 
+  group_by(game_id, off_team_id, OFF_PLAYER_ID, OFF_PLAYER_NAME) %>%
+  arrange(OFF_PLAYER_NAME, -MATCHUP_MIN) %>%
+  mutate(min_played = sum(MATCHUP_MIN),
+         matchup_min_end = cumsum(MATCHUP_MIN),
+         matchup_min_start = matchup_min_end - MATCHUP_MIN,
+         pct_matchup_time = MATCHUP_MIN/min_played,
+         DEF_PLAYER_NAME_LAST = sub("^\\S+\\s", "", DEF_PLAYER_NAME),
+         pct_matchup_time_scaled = scales::rescale(pct_matchup_time),
+         DEF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", DEF_PLAYER_ID, ".png"),
+         OFF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", OFF_PLAYER_ID, ".png"))
+
+
+
+
+write.csv(df, "Data/matchups.csv")
 write.csv(gamelog, "Data/gamelog.csv")
 
