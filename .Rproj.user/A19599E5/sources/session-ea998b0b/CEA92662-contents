@@ -1,0 +1,317 @@
+library(rvest)
+library(dplyr)
+library(tidyverse)
+library(extrafont)
+
+# Load the required libraries
+
+get_sportsodds <- function(season) {
+  
+  # Specify the URL of the webpage containing the table
+  url <- paste0("https://www.sportsoddshistory.com/nba-main/?y=", season ,  "&sa=nba&a=finals&o=r")
+  
+  # Replace with the actual URL
+  
+  # Read the HTML content of the webpage
+  webpage <- read_html(url)
+  
+sc
+  # Remove the first row from the data frame
+  data <- data[-1, ]
+  
+  
+  df <- data %>%
+    head(1) %>%
+    select(Team, 'Round 1', ConfSemis, ConfFinals, Finals)
+  
+  colnames(df) <- c('team', 'round1', 'conf_semis', 'conf_finals', 'finals')
+  
+  df$season = season
+  
+  
+  return(df)
+
+}
+
+get_sportsodds_conf <- function(season, conference) {
+  
+  # Specify the URL of the webpage containing the table
+  url <- paste0("https://www.sportsoddshistory.com/nba-main/?y=", season ,  "&sa=nba&a=", conference, "&o=r")
+  
+  # Replace with the actual URL
+  
+  # Read the HTML content of the webpage
+  webpage <- read_html(url)
+  
+  # Find the table with class "soh1"
+  table <- html_nodes(webpage, "table.soh1")
+  
+  # Extract the table data
+  data <- html_table(table)[[1]]
+  
+  # Extract the first row as column names
+  col_names <- data[1, ]
+  
+  # Set the first row as column names
+  colnames(data) <- col_names
+  
+  # Remove the first row from the data frame
+  data <- data[-1, ]
+  
+  
+  df <- data %>%
+    head(1) %>%
+    select(Team, 'Round 1', ConfSemis, ConfFinals)
+  
+  colnames(df) <- c('team', 'round1', 'conf_semis', 'conf_finals')
+  
+  df$season = season
+  
+  
+  return(df)
+  
+}
+
+
+get_implied_odds <- function(odds) {
+  
+
+  if(odds > 0){
+    return(100/(100+odds))
+  }
+  else{
+
+    return(odds/(odds - 100))
+    
+  }
+  
+  
+}
+
+
+
+
+
+theme_saurabh <- function () { 
+  theme(
+    text=element_text(family='Roboto Mono'),
+    plot.title=element_text(size=18, family = 'Roboto Black'),
+    plot.subtitle=element_text(size=9, family = 'Roboto Slab'),
+    plot.caption=element_text(size=8, family = 'Roboto Mono'),
+    panel.background = element_blank(),
+    
+  )
+}
+
+
+
+# Create the list of NBA seasons
+seasons <- paste0(seq(2009, 2022), "-", seq(2010, 2023))
+
+# Initialize an empty data frame to store the combined results
+sportsodds_df <- data.frame()
+
+# Loop through each season, call the "get_sportsodds" function, and combine the results
+for (season in seasons) {
+  
+  print(season)
+  # Call the "get_sportsodds" function for the current season
+  temp_df <- get_sportsodds(season)
+  
+  # Combine the current data frame with the existing data
+  sportsodds_df <- rbind(sportsodds_df, temp_df)
+  
+  Sys.sleep(3)
+}
+
+
+team_colors <- read_csv('C:/Users/saurabh.rane/OneDrive - Slalom/NBA/data_update_scripts/Data/teamColors.csv') %>%
+  select(TEAM_NAME, TEAM_ABBREVIATION, 'Primary Color')
+
+
+colnames(team_colors) <- c('team', 'abv', 'primary_color')
+
+
+
+viz_df <- sportsodds_df %>%
+  rowwise() %>%
+  mutate(round1 = get_implied_odds(as.numeric(round1)),
+         conf_semis = get_implied_odds(as.numeric(conf_semis)),
+         conf_finals = get_implied_odds(as.numeric(conf_finals)),
+         finals = get_implied_odds(as.numeric(finals))
+  ) %>%
+  pivot_longer(cols = c(round1, conf_semis, conf_finals, finals), 
+               names_to = "round", values_to = "odds") %>%
+  left_join(team_colors, by = 'team') %>%
+  mutate(team_season =  paste0(abv, " '", substr(season, 8, 10)),
+         linewidth = ifelse(team == 'Denver Nuggets', 1, 0.6),
+         alpha = ifelse(team == 'Denver Nuggets', 1, 0.5))
+
+# Define the desired order of the levels
+desired_order <- c("round1", "conf_semis", "conf_finals", "finals")
+
+# Convert the 'round' column to a factor with the desired order
+viz_df$round <- factor(viz_df$round, levels = desired_order)
+
+x_labels <- c("First Round", "Conference Semis", "Conference Finals", "Finals")
+
+
+viz_df %>%
+  ggplot(aes(x = round, 
+             y = odds, 
+             color = primary_color,
+             group = team_season,
+             size = linewidth,
+             alpha = alpha)
+         ) +
+  geom_line() +
+  geom_point() +
+  geom_text(data = viz_df %>% filter(round == 'finals'), aes(label =  team_season),
+             size = 3, alpha = 1, hjust = 'left',  family = "Roboto", check_overlap = TRUE,
+            x = 4.2) +
+  geom_text(data = viz_df %>% filter(round == 'finals', team == 'Denver Nuggets'), aes(label =  team_season),
+            size = 3, alpha = 1, hjust = 'left',  family = "Roboto Black", check_overlap = TRUE,
+            x = 4.2) +
+  geom_label(data = viz_df %>% filter(team == 'Denver Nuggets'), 
+             aes(label = percent(odds, accuracy = 1)),
+            size = 3, alpha = 1, fill = '#FFF1C9',
+            family = "Roboto Slab",) +
+  scale_fill_identity() +
+  scale_color_identity() +
+  scale_alpha_identity() +
+  scale_size_identity() +
+  theme_saurabh()  +
+  labs(title = "Denver's Easy Path to a Ring?", 
+       subtitle= "Implied Odds of Winning a Champinonship Before a Given Round | Championship Teams 2010 - Present",
+       x="", y="",
+       caption = 'Data: SportsOddHistory | Viz: @SaurabhOnTap') + 
+  theme(legend.position="none",
+        axis.ticks.y = element_blank()) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  scale_x_discrete(labels = x_labels)
+
+ggsave("nuggets_oddsv2.png", height = 6, width = 6) 
+
+
+
+unique(sportsodds_df$team)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Initialize an empty data frame to store the combined results
+sportsodds_df <- data.frame()
+
+# Loop through each season, call the "get_sportsodds" function, and combine the results
+for (season in seasons) {
+  
+  print(season)
+  # Call the "get_sportsodds" function for the current season
+  temp_df <- get_sportsodds_conf(season, "west")
+  
+  # Combine the current data frame with the existing data
+  sportsodds_df <- rbind(sportsodds_df, temp_df)
+  
+  Sys.sleep(3)
+}
+
+# Loop through each season, call the "get_sportsodds" function, and combine the results
+for (season in seasons) {
+  
+  print(season)
+  # Call the "get_sportsodds" function for the current season
+  temp_df <- get_sportsodds_conf(season, "east")
+  
+  # Combine the current data frame with the existing data
+  sportsodds_df <- rbind(sportsodds_df, temp_df)
+  
+  Sys.sleep(3)
+}
+
+
+team_colors <- read_csv('C:/Users/saurabh.rane/OneDrive - Slalom/NBA/data_update_scripts/Data/teamColors.csv') %>%
+  select(TEAM_NAME, TEAM_ABBREVIATION, 'Primary Color')
+
+
+colnames(team_colors) <- c('team', 'abv', 'primary_color')
+
+
+
+viz_df <- sportsodds_df %>%
+  filter(season != '2009-2010') %>%
+  rowwise() %>%
+  mutate(round1 = get_implied_odds(as.numeric(round1)),
+         conf_semis = get_implied_odds(as.numeric(conf_semis)),
+         conf_finals = get_implied_odds(as.numeric(conf_finals))) %>%
+  pivot_longer(cols = c(round1, conf_semis, conf_finals), 
+               names_to = "round", values_to = "odds") %>%
+  left_join(team_colors, by = 'team') %>%
+  mutate(team_season =  paste0(abv, " '", substr(season, 8, 10)),
+         linewidth = ifelse(team == 'Denver Nuggets', 1, 0.6),
+         alpha = ifelse(team == 'Denver Nuggets', 1, 0.5))
+
+
+
+
+
+
+# Define the desired order of the levels
+desired_order <- c("round1", "conf_semis", "conf_finals")
+
+# Convert the 'round' column to a factor with the desired order
+viz_df$round <- factor(viz_df$round, levels = desired_order)
+
+x_labels <- c("First Round", "Conference Semis", "Conference Finals")
+
+
+viz_df %>%
+  ggplot(aes(x = round, 
+             y = odds, 
+             color = primary_color,
+             group = team_season,
+             size = linewidth,
+             alpha = alpha)
+  ) +
+  geom_line() +
+  geom_point() +
+  geom_text(data = viz_df %>% filter(round == 'conf_finals'), aes(label =  team_season),
+            size = 3, alpha = 1, hjust = 'left',  family = "Roboto", check_overlap = TRUE,
+            x = 3.2) +
+  geom_text(data = viz_df %>% filter(round == 'conf_finals', team == 'Denver Nuggets'), aes(label =  team_season),
+            size = 3, alpha = 1, hjust = 'left',  family = "Roboto Black", check_overlap = TRUE,
+            x = 3.2) +
+  geom_label(data = viz_df %>% filter(team == 'Denver Nuggets'), 
+             aes(label = percent(odds, accuracy = 1)),
+             size = 3, alpha = 1, fill = '#FFF1C9',
+             family = "Roboto Slab",) +
+  scale_fill_identity() +
+  scale_color_identity() +
+  scale_alpha_identity() +
+  scale_size_identity() +
+  theme_saurabh()  +
+  labs(title = "Are We Fine West (or East)?", 
+       subtitle= "Implied Odds of Making the Finals Before a Given Round | Finalists 2011 - Present",
+       x="", y="",
+       caption = 'Data: SportsOddHistory | Viz: @SaurabhOnTap') + 
+  theme(legend.position="none",
+        axis.ticks.y = element_blank()) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  scale_x_discrete(labels = x_labels)
+
+
+ggsave("conf_odds.png", height = 6, width = 6) 
+
+

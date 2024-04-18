@@ -1,0 +1,14 @@
+name: player_match_up_r-dev
+title: player_match_up_r-dev
+username:
+account: saurabhrane
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 8909653
+bundleId: 7115274
+url: https://saurabhrane.shinyapps.io/player_match_up_r-dev/
+when: 1682016437.57851
+lastSyncTime: 1682016437.57851
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: Anthony Davis _def_deployement .png|app_reactive_test.R|app_temp.R|Austin Reaves _def_deployement .png|BKN _def_by_ PHI .png|De'Aaron Fox _def_deployement .png|Dillon Brooks _def_deployement .png|Draymond Green _def_deployement .png|Gary Payton II _def_deployement .png|GSW _def_by_ SAC .png|ihateshiny.R|Jaren Jackson Jr. _def_deployement .png|Jarred Vanderbilt _def_deployement .png|LAL _def_by_ MEM .png|match_up_data.R|match_up_data_pull.R|match_ups_sample.csv|MEM _def_by_ LAL .png|PHI _def_by_ BKN .png|SAC _def_by_ GSW .png|t1MIN vs. DENGame 1.png|t1NYK vs. CLEGame 1.png|t1PHI vs. BKNGame 1.png|t2MIN vs. DENGame 1.png|t2NYK vs. CLEGame 1.png|t2PHI vs. BKNGame 1.png|team_plot_1_image.png|viz_prep.R|www

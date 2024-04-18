@@ -1,0 +1,14 @@
+name: player_match_up_r
+title: player_match_up_r
+username:
+account: saurabhrane
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 8902474
+bundleId: 7300648
+url: https://saurabhrane.shinyapps.io/player_match_up_r/
+when: 1685809515.20228
+lastSyncTime: 1685809515.20228
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: Al HorfordBOS vs. ATL_series.png|Al HorfordBOS vs. ATLGame 1.png|app_reactive_test.R|app_temp.R|Cam ThomasPHI vs. BKNGame 1.png|Cameron JohnsonPHI vs. BKNGame 1.png|Cameron JohnsonPHI vs. BKNGame 2.png|Domantas SabonisSAC vs. GSWGame 3.png|GSW _def_by_ SAC .png|ihateshiny.R|Jarrett AllenNYK vs. CLEGame 1.png|Kevon LooneySAC vs. GSWGame 3.png|LAL _def_by_ MEM .png|match_up_data.R|match_up_data_pull.R|match_ups_sample.csv|Nic ClaxtonPHI vs. BKNGame 2.png|team_plot_1_image.png|viz_prep.R
