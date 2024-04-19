@@ -13,11 +13,10 @@ library(extrafont)
 library(forcats)
 loadfonts(device="win")
 
-
 pull_matchup_box <- function(game_id){
   
   print(game_id)
-  #pull_df <- rbind(nba_boxscorematchupsv3(game_id = game_id)[[1]], nba_boxscorematchupsv3(game_id = game_id)[[2]]) 
+  pull_df <- rbind(nba_boxscorematchupsv3(game_id = game_id)[[1]], nba_boxscorematchupsv3(game_id = game_id)[[2]]) 
   
   pull_df <- tryCatch(
     expr = {
@@ -44,7 +43,7 @@ pull_matchup_box <- function(game_id){
            def_team_id = ifelse(team_id == home_team_id, away_team_id, home_team_id)) %>%
   select(game_id, off_team_id, OFF_PLAYER_ID, OFF_PLAYER_NAME, 
            def_team_id, DEF_PLAYER_ID, DEF_PLAYER_NAME, 
-           MATCHUP_MIN)
+           MATCHUP_MIN, percentage_total_time_both_on)
   
   return(df)
 
@@ -132,9 +131,11 @@ unique_matchups <- gamelog %>%
   ungroup()
 
 gamelog_enchanced <- gamelog %>%
+  left_join(gamelog %>% select('GAME_ID', 'TEAM_NAME') %>% rename('OPP_NAME' = 'TEAM_NAME'),
+            by = c('GAME_ID')) %>%
+  filter(OPP_NAME != TEAM_NAME) %>%
   left_join(unique_matchups, by = c('TEAM_ID', 'MATCHUP')) %>%
-  mutate(matchup_full = paste0("Round ", round, ": ", MATCHUP, ", ", game_number))()
-
+  mutate(matchup_full = paste0("Round ", round, ": ", MATCHUP, ", ", game_number)) 
 
 
 
@@ -148,11 +149,13 @@ df <- matchup_df %>%
          DEF_PLAYER_NAME_LAST = sub("^\\S+\\s", "", DEF_PLAYER_NAME),
          pct_matchup_time_scaled = scales::rescale(pct_matchup_time),
          DEF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", DEF_PLAYER_ID, ".png"),
-         OFF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", OFF_PLAYER_ID, ".png"))
+         OFF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", OFF_PLAYER_ID, ".png")) %>%
+  left_join(gamelog_enchanced %>% select(GAME_ID, TEAM_ID, matchup_full),
+            by = c('GAME_ID', 'TEAM_ID'))
 
 
 
 
 write.csv(df, "Data/matchups.csv")
-write.csv(gamelog, "Data/gamelog.csv")
+write.csv(gamelog_enchanced, "Data/gamelog.csv")
 
