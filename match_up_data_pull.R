@@ -98,6 +98,10 @@ gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_rec
   arrange(MATCHUP) %>%
   mutate(version = format(Sys.time(), "%a %b %d %X"))
 
+
+   
+
+
 saveRDS(gamelog, "gamelog.rds")
 
 
@@ -108,13 +112,29 @@ gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_rec
                               season_type = 'Playoffs')[[1]] %>% 
   mutate(MATCHUP = str_replace_all(MATCHUP, c("@" = "vs.")))  %>%
   filter(!is.na(WL)) %>%
-  select(TEAM_ID, GAME_ID, GAME_DATE, MATCHUP) %>%
-  group_by(MATCHUP, TEAM_ID) %>%
+  select(TEAM_NAME, TEAM_ID, GAME_ID, GAME_DATE, MATCHUP) %>%
+  group_by(MATCHUP, TEAM_ID, TEAM_NAME) %>%
   arrange(MATCHUP,GAME_DATE) %>%
   mutate(game_number = paste0("Game ", row_number())) %>%
   ungroup() %>%
   arrange(MATCHUP) %>%
-  mutate(version = format(Sys.time(), "%a %b %d %X"))
+  mutate(version = format(Sys.time(), "%a %b %d %X"),
+         )
+
+
+unique_matchups <- gamelog %>%
+  group_by(TEAM_ID, MATCHUP) %>%
+  summarize(matchup_start = min(GAME_DATE)) %>%
+  arrange(matchup_start) %>%
+  ungroup() %>%
+  group_by(TEAM_ID) %>%
+  mutate(round = row_number()) %>%
+  ungroup()
+
+gamelog_enchanced <- gamelog %>%
+  left_join(unique_matchups, by = c('TEAM_ID', 'MATCHUP')) %>%
+  mutate(matchup_full = paste0("Round ", round, ": ", MATCHUP, ", ", game_number))()
+
 
 
 
