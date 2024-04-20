@@ -135,7 +135,9 @@ gamelog_enchanced <- gamelog %>%
             by = c('GAME_ID')) %>%
   filter(OPP_NAME != TEAM_NAME) %>%
   left_join(unique_matchups, by = c('TEAM_ID', 'MATCHUP')) %>%
-  mutate(matchup_full = paste0("Round ", round, ": ", MATCHUP, ", ", game_number)) 
+  mutate(matchup_full = paste0("Round ", round, ": ", MATCHUP, ", ", game_number)) %>%
+  group_by(TEAM_NAME, TEAM_ID) %>%
+  arrange(TEAM_NAME, round, game_number)
 
 
 

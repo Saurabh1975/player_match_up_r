@@ -135,7 +135,9 @@ gamelog_enchanced <- gamelog %>%
             by = c('GAME_ID')) %>%
   filter(OPP_NAME != TEAM_NAME) %>%
   left_join(unique_matchups, by = c('TEAM_ID', 'MATCHUP')) %>%
-  mutate(matchup_full = paste0("Round ", round, ": ", MATCHUP, ", ", game_number)) 
+  mutate(matchup_full = paste0("Round ", round, ": ", MATCHUP, ", ", game_number)) %>%
+  group_by(TEAM_NAME, TEAM_ID) %>%
+  arrange(TEAM_NAME, round, game_number)
 
 
 
@@ -151,7 +153,7 @@ df <- matchup_df %>%
          DEF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", DEF_PLAYER_ID, ".png"),
          OFF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", OFF_PLAYER_ID, ".png")) %>%
   left_join(gamelog_enchanced %>% select(GAME_ID, TEAM_ID, matchup_full),
-            by = c('GAME_ID', 'TEAM_ID'))
+            by = c('game_id' = 'GAME_ID', 'TEAM_ID'))
 
 
 
