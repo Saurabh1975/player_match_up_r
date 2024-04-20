@@ -136,9 +136,15 @@ gamelog_enchanced <- gamelog %>%
   filter(OPP_NAME != TEAM_NAME) %>%
   left_join(unique_matchups, by = c('TEAM_ID', 'MATCHUP')) %>%
   mutate(matchup_full = paste0("Round ", round, ": ", MATCHUP, ", ", game_number)) %>%
+  left_join(team_colors %>% select(TEAM_NAME, Primary.Color) %>% rename('TEAM_COLOR' = 'Primary.Color'),
+            by = c('TEAM_NAME'))  %>%
+  left_join(team_colors %>% select(TEAM_NAME, Primary.Color) 
+              %>% rename('OPP_NAME' = 'TEAM_NAME', 'OPP_COLOR' = 'Primary.Color'),
+            by = c('OPP_NAME'))  %>%
   group_by(TEAM_NAME, TEAM_ID) %>%
   arrange(TEAM_NAME, round, game_number)
 
+team_colors
 
 
 df <- matchup_df %>% 
