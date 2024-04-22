@@ -50,7 +50,7 @@ pull_matchup_box <- function(game_id){
 }
 
 #Get List of Playoff Games
-gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_recent_nba_season() - 2),
+gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_recent_nba_season() - 1),
                               season_type = 'Playoffs')[[1]] %>%
   filter(!is.na(WL)) %>%
   select(GAME_ID, GAME_DATE)
@@ -81,7 +81,7 @@ sum(raw_matchup_df %>% filter(DEF_PLAYER_ID == 1629027, game_id == '0042200111')
 saveRDS(matchup_df, "matchups.rds")
 
 
-gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_recent_nba_season() - 2),
+gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_recent_nba_season() - 1),
                               season_type = 'Playoffs')[[1]] %>% 
   filter(!is.na(WL)) %>%
   mutate(MATCHUP = str_replace_all(MATCHUP, c("@" = "vs.")))  %>%
@@ -107,7 +107,7 @@ saveRDS(gamelog, "gamelog.rds")
 
 ##Redoing Gamelog
 
-gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_recent_nba_season() - 2),
+gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_recent_nba_season() - 1),
                               season_type = 'Playoffs')[[1]] %>% 
   mutate(MATCHUP = str_replace_all(MATCHUP, c("@" = "vs.")))  %>%
   filter(!is.na(WL)) %>%
@@ -146,7 +146,6 @@ gamelog_enchanced <- gamelog %>%
 
 team_colors
 
-
 df <- matchup_df %>% 
   group_by(game_id, off_team_id, OFF_PLAYER_ID, OFF_PLAYER_NAME) %>%
   arrange(OFF_PLAYER_NAME, -MATCHUP_MIN) %>%
@@ -158,10 +157,16 @@ df <- matchup_df %>%
          pct_matchup_time_scaled = scales::rescale(pct_matchup_time),
          DEF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", DEF_PLAYER_ID, ".png"),
          OFF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", OFF_PLAYER_ID, ".png")) %>%
-  left_join(gamelog_enchanced %>% select(GAME_ID, TEAM_ID, matchup_full),
-            by = c('game_id' = 'GAME_ID', 'TEAM_ID'))
+  inner_join(gamelog_enchanced %>% select(GAME_ID, TEAM_ID, matchup_full) %>% mutate(TEAM_ID = as.integer(TEAM_ID)),
+            by = c('game_id' = 'GAME_ID', 'off_team_id' = 'TEAM_ID'))
 
 
+
+matchup_df$game_id[1]
+matchup_df$off_team_id[1]
+
+
+gamelog_enchanced %>% filter(TEAM_ID == matchup_df$off_team_id[1], GAME_ID == matchup_df$game_id[1])
 
 
 write.csv(df, "Data/matchups.csv")
