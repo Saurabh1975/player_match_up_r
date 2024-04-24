@@ -170,6 +170,7 @@ df <- matchup_df %>%
 
 
 
+
 df_def <- matchup_df %>% 
   group_by(game_id, def_team_id, DEF_PLAYER_ID) %>%
   arrange(DEF_PLAYER_ID, -MATCHUP_MIN) %>%
@@ -191,6 +192,7 @@ df <- matchup_df %>%
          matchup_min_end = cumsum(MATCHUP_MIN),
          matchup_min_start = matchup_min_end - MATCHUP_MIN,
          pct_matchup_time = MATCHUP_MIN/min_played,
+         OFF_PLAYER_NAME_LAST = sub("^\\S+\\s", "", OFF_PLAYER_NAME),
          DEF_PLAYER_NAME_LAST = sub("^\\S+\\s", "", DEF_PLAYER_NAME),
          pct_matchup_time_scaled = scales::rescale(pct_matchup_time),
          DEF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", DEF_PLAYER_ID, ".png"),
