@@ -158,13 +158,15 @@ df <- matchup_df %>%
          pct_matchup_time_scaled = scales::rescale(pct_matchup_time),
          DEF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", DEF_PLAYER_ID, ".png"),
          OFF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", OFF_PLAYER_ID, ".png")) %>%
-  inner_join(gamelog_enchanced %>% select(GAME_ID, TEAM_ID, matchup_full) %>% mutate(TEAM_ID = as.integer(TEAM_ID)),
+  inner_join(gamelog_enchanced %>% select(GAME_ID, TEAM_ID, MATCHUP, game_number, matchup_full) %>% mutate(TEAM_ID = as.integer(TEAM_ID)),
             by = c('game_id' = 'GAME_ID', 'off_team_id' = 'TEAM_ID'))
 
 
 
 matchup_df$game_id[1]
 matchup_df$off_team_id[1]
+
+gamelog_enchanced$TEAM_ID[1]
 
 
 gamelog_enchanced %>% filter(TEAM_ID == matchup_df$off_team_id[1], GAME_ID == matchup_df$game_id[1])
