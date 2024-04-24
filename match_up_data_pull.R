@@ -165,6 +165,25 @@ df <- matchup_df %>%
 
 
 
+
+
+
+
+
+df_def <- matchup_df %>% 
+  group_by(game_id, def_team_id, DEF_PLAYER_ID) %>%
+  arrange(DEF_PLAYER_ID, -MATCHUP_MIN) %>%
+  mutate(min_played = sum(MATCHUP_MIN),
+         matchup_min_end_def = cumsum(MATCHUP_MIN),
+         matchup_min_start_def = matchup_min_end_def - MATCHUP_MIN,
+         pct_matchup_time_def = MATCHUP_MIN/min_played,
+         pct_matchup_time_scaled_def = scales::rescale(pct_matchup_time_def)) %>%
+  select(game_id, def_team_id, OFF_PLAYER_ID, DEF_PLAYER_ID, matchup_min_start_def,
+         matchup_min_end_def,  pct_matchup_time_scaled_def)
+
+
+
+
 df <- matchup_df %>% 
   group_by(game_id, off_team_id, OFF_PLAYER_ID, OFF_PLAYER_NAME) %>%
   arrange(OFF_PLAYER_NAME, -MATCHUP_MIN) %>%
@@ -177,20 +196,11 @@ df <- matchup_df %>%
          DEF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", DEF_PLAYER_ID, ".png"),
          OFF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", OFF_PLAYER_ID, ".png")) %>%
   inner_join(gamelog_enchanced %>% select(GAME_ID, TEAM_ID, MATCHUP, game_number, matchup_full) %>% mutate(TEAM_ID = as.integer(TEAM_ID)),
-             by = c('game_id' = 'GAME_ID', 'off_team_id' = 'TEAM_ID'))
+             by = c('game_id' = 'GAME_ID', 'off_team_id' = 'TEAM_ID')) %>%
+  inner_join(df_def, by = c('game_id', 'OFF_PLAYER_ID',  'def_team_id', 'DEF_PLAYER_ID'))
 
 
 
-df_def <- matchup_df %>% 
-  group_by(game_id, def_team_id, DEF_PLAYER_ID) %>%
-  arrange(DEF_PLAYER_ID, -MATCHUP_MIN) %>%
-  mutate(min_played = sum(MATCHUP_MIN),
-         matchup_min_end_def = cumsum(MATCHUP_MIN),
-         matchup_min_start_def = matchup_min_end - MATCHUP_MIN,
-         pct_matchup_time_def = MATCHUP_MIN/min_played,
-         pct_matchup_time_scaled_def = scales::rescale(pct_matchup_time)) %>%
-  select(game_id, def_team_id, DEF_PLAYER_ID,
-         matchup_min_end_def, matchup_min_start_def, pct_matchup_time_scaled_def)
 
 
 
