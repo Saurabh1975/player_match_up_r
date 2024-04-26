@@ -42,71 +42,20 @@ pull_matchup_box <- function(game_id){
            MATCHUP_MIN = matchup_minutes_sort/60,
            off_team_id = team_id,
            def_team_id = ifelse(team_id == home_team_id, away_team_id, home_team_id)) %>%
-  select(game_id, off_team_id, OFF_PLAYER_ID, OFF_PLAYER_NAME, 
+    select(game_id, off_team_id, OFF_PLAYER_ID, OFF_PLAYER_NAME, 
            def_team_id, DEF_PLAYER_ID, DEF_PLAYER_NAME, 
            MATCHUP_MIN, percentage_total_time_both_on)
   
   return(df)
-
+  
 }
 
-#Get List of Playoff Games
-gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_recent_nba_season() - 1),
-                              season_type = 'Playoffs')[[1]] %>%
-  filter(!is.na(WL)) %>%
-  select(GAME_ID, GAME_DATE)
-
-#Get Matchup Dataframe
-raw_matchup_df <- do.call(rbind, lapply(unique(gamelog$GAME_ID), pull_matchup_box))
-
-
-#Join in helper columns
-
-team_colors <- read.csv('C:/Users/saurabh.rane/OneDrive - Slalom/NBA/data_update_scripts/Data/teamColors.csv') %>%
-  select(TEAM_ID, TEAM_NAME, TEAM_ABBREVIATION, Primary.Color)
-
-
-matchup_df <- raw_matchup_df %>% 
-  left_join(team_colors, by = c('off_team_id' = 'TEAM_ID')) %>%
-  left_join(team_colors, by = c('def_team_id' = 'TEAM_ID')) %>%
-  rename(off_team_abv = TEAM_ABBREVIATION.x, off_team_name = TEAM_NAME.x, off_team_color = Primary.Color.x,
-         def_team_abv = TEAM_ABBREVIATION.y, def_team_name = TEAM_NAME.y, def_team_color = Primary.Color.y) %>%
-  mutate(OFF_PLAYER_NAME = str_replace_all(OFF_PLAYER_NAME, "[^[:alnum:][:space:]]", ""),
-         DEF_PLAYER_NAME = str_replace_all(DEF_PLAYER_NAME, "[^[:alnum:][:space:]]", ""))
-
-
-sum(raw_matchup_df %>% filter(OFF_PLAYER_ID == 1629027, game_id == '0042200111') %>% pull(MATCHUP_MIN))
-
-sum(raw_matchup_df %>% filter(DEF_PLAYER_ID == 1629027, game_id == '0042200111') %>% pull(MATCHUP_MIN))
-
-saveRDS(matchup_df, "matchups.rds")
-
-
-gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_recent_nba_season() - 1),
-                              season_type = 'Playoffs')[[1]] %>% 
-  filter(!is.na(WL)) %>%
-  mutate(MATCHUP = str_replace_all(MATCHUP, c("@" = "vs.")))  %>%
-  select(GAME_ID, GAME_DATE, MATCHUP) %>%
-  group_by(GAME_ID) %>%
-  mutate(MATCHUP = max(MATCHUP)) %>%
-  ungroup() %>%
-  distinct(GAME_ID, .keep_all = TRUE) %>%
-  group_by(MATCHUP) %>%
-  arrange(MATCHUP,GAME_DATE) %>%
-  mutate(game_number = paste0("Game ", row_number())) %>%
-  ungroup() %>%
-  arrange(MATCHUP) %>%
-  mutate(version = format(Sys.time(), "%a %b %d %X"))
-
-
-   
-
-
-saveRDS(gamelog, "gamelog.rds")
 
 
 
-##Redoing Gamelog
+
+
+
 
 gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_recent_nba_season() - 1),
                               season_type = 'Playoffs')[[1]] %>% 
@@ -119,7 +68,7 @@ gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_rec
   ungroup() %>%
   arrange(MATCHUP) %>%
   mutate(version = format(Sys.time(), "%a %b %d %X"),
-         )
+  )
 
 
 unique_matchups <- gamelog %>%
@@ -140,10 +89,39 @@ gamelog_enchanced <- gamelog %>%
   left_join(team_colors %>% select(TEAM_NAME, Primary.Color) %>% rename('TEAM_COLOR' = 'Primary.Color'),
             by = c('TEAM_NAME'))  %>%
   left_join(team_colors %>% select(TEAM_NAME, Primary.Color) 
-              %>% rename('OPP_NAME' = 'TEAM_NAME', 'OPP_COLOR' = 'Primary.Color'),
+            %>% rename('OPP_NAME' = 'TEAM_NAME', 'OPP_COLOR' = 'Primary.Color'),
             by = c('OPP_NAME'))  %>%
   group_by(TEAM_NAME, TEAM_ID) %>%
   arrange(TEAM_NAME, round, game_number)
+
+
+
+
+
+
+
+
+#Get Matchup Dataframe
+raw_matchup_df <- do.call(rbind, lapply(unique(gamelog$GAME_ID), pull_matchup_box))
+
+
+#Join in helper columns
+
+team_colors <- read.csv('C:/Users/saurabh.rane/OneDrive - Slalom/NBA/data_update_scripts/Data/teamColors.csv') %>%
+  select(TEAM_ID, TEAM_NAME, TEAM_ABBREVIATION, Primary.Color)
+
+
+#First pass at Matchup Clean
+
+matchup_df <- raw_matchup_df %>% 
+  left_join(team_colors, by = c('off_team_id' = 'TEAM_ID')) %>%
+  left_join(team_colors, by = c('def_team_id' = 'TEAM_ID')) %>%
+  rename(off_team_abv = TEAM_ABBREVIATION.x, off_team_name = TEAM_NAME.x, off_team_color = Primary.Color.x,
+         def_team_abv = TEAM_ABBREVIATION.y, def_team_name = TEAM_NAME.y, def_team_color = Primary.Color.y) %>%
+  mutate(OFF_PLAYER_NAME = str_replace_all(OFF_PLAYER_NAME, "[^[:alnum:][:space:]]", ""),
+         DEF_PLAYER_NAME = str_replace_all(DEF_PLAYER_NAME, "[^[:alnum:][:space:]]", ""))
+
+
 
 
 
@@ -183,10 +161,8 @@ df <- matchup_df %>%
 
 
 
-
-
-
-
 write.csv(df, "Data/matchups.csv")
 write.csv(gamelog_enchanced, "Data/gamelog.csv")
+
+
 
