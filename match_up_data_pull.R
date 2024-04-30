@@ -5,13 +5,11 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(stringr)
-library(png)
 library(ggimage)
-library(magick)
 library(ggtext)
 library(extrafont)
-library(forcats)
-loadfonts(device="win")
+
+
 
 
 pull_matchup_box <- function(game_id){
