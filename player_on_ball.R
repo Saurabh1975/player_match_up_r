@@ -94,115 +94,120 @@ combined_df <- do.call(rbind, dfs) %>%
 
 
 
-
+for(team in unique(combined_df$team_abbreviation)){
+  print(team)
+  generate_charts(team)
+}
 
 team_filter = "PHX"
 
 
 
+generate_charts <- function(team_filter){
 
-# Combine all dataframes into one
-viz_df_bar <- combined_df %>%
-  group_by(game_id, team_id) %>%
-  arrange(-time_of_poss) %>%
-  mutate(time_of_poss_cumsum =  cumsum(time_of_poss),
-         time_of_poss_scale = scales::rescale(time_of_poss),
-  ) %>%
-  dplyr::filter(team_abbreviation == team_filter) %>%
-  ungroup() %>%
-  group_by(game_id, team_id) %>%
-  arrange(-time_of_poss)
+  
+  # Combine all dataframes into one
+  viz_df_bar <- combined_df %>%
+    group_by(game_id, team_id) %>%
+    arrange(-time_of_poss) %>%
+    mutate(time_of_poss_cumsum =  cumsum(time_of_poss),
+           time_of_poss_scale = scales::rescale(time_of_poss),
+    ) %>%
+    dplyr::filter(team_abbreviation == team_filter) %>%
+    ungroup() %>%
+    group_by(game_id, team_id) %>%
+    arrange(-time_of_poss)
+    
+    
+  
+  bar_width <- 0.35
+  bar_spacing <- 0.2 + .04*length(unique(viz_df_bar$game_number))
+  
+  # Create horizontal stacked bar chart
+  g1 <- ggplot(viz_df_bar, aes(x = time_of_poss, y = game_number)) +
+    geom_bar(stat = "identity", color = "white", width = bar_width, 
+             aes(alpha = time_of_poss, fill = team_color)) +
+    scale_fill_identity() +
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          axis.line = element_line(colour = "black"))   +
+    geom_text( aes(x = time_of_poss_cumsum - time_of_poss/2 , y = game_number, fill=NULL,
+                   label = ifelse(viz_df_bar$time_of_poss > 1.5, viz_df_bar$player_name_last, "")),
+               color='white',
+               size = 2.4, hjust = 0.5, fontface = 'bold') + 
+    geom_from_path(data = viz_df_bar %>% filter(time_of_poss > 1.5),
+                   aes(x = time_of_poss_cumsum - time_of_poss/2, 
+                       y = game_number, path = player_headshot), 
+                   width = 0.1, height = 0.0735, position = position_nudge(y = bar_spacing)) +
+    theme(legend.position="none") + 
+    theme_saurabh() +
+    labs(title=paste0("Who Had the Ball "),
+         subtitle = paste0(viz_df_bar$matchup[1], ", 2024"),
+         caption = 'Data: stats.nba.com via nba_api | Viz: @SaurabhOnTap',
+         x = "Time on Ball (Min.)", y = "") + 
+    coord_cartesian(ylim = c(1, length(unique(viz_df_bar$game_number))*1.025
+    ))  + 
+    scale_y_discrete(limits=rev)
   
   
-
-bar_width <- 0.35
-bar_spacing <- 0.2 + .04*length(unique(viz_df_bar$game_number))
-
-# Create horizontal stacked bar chart
-g1 <- ggplot(viz_df_bar, aes(x = time_of_poss, y = game_number)) +
-  geom_bar(stat = "identity", color = "white", width = bar_width, 
-           aes(alpha = time_of_poss, fill = team_color)) +
-  scale_fill_identity() +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))   +
-  geom_text( aes(x = time_of_poss_cumsum - time_of_poss/2 , y = game_number, fill=NULL,
-                 label = ifelse(viz_df_bar$time_of_poss > 1.5, viz_df_bar$player_name_last, "")),
-             color='white',
-             size = 2.4, hjust = 0.5, fontface = 'bold') + 
-  geom_from_path(data = viz_df_bar %>% filter(time_of_poss > 1.5),
-                 aes(x = time_of_poss_cumsum - time_of_poss/2, 
-                     y = game_number, path = player_headshot), 
-                 width = 0.1, height = 0.0735, position = position_nudge(y = bar_spacing)) +
-  theme(legend.position="none") + 
-  theme_saurabh() +
-  labs(title=paste0("Who Had the Ball "),
-       subtitle = paste0(viz_df_bar$matchup[1], ", 2024"),
-       caption = 'Data: stats.nba.com via nba_api | Viz: @SaurabhOnTap',
-       x = "Time on Ball (Min.)", y = "") + 
-  coord_cartesian(ylim = c(1, length(unique(viz_df_bar$game_number))*1.025
-  ))  + 
-  scale_y_discrete(limits=rev)
-
-
-
-
-ggsave(plot = g1, filename = paste0("Plots/", viz_df_bar$team_name[1], " - ", viz_df_bar$opp_name[1], " - Bar.png"), 
-  height = 6, width = 6) 
-
-
-player_list <- combined_df %>%
-  group_by(game_id, team_id) %>%
-  arrange(-time_of_poss) %>%
-  slice(1:3) %>%
-  pull(player_id) %>%
-  unique()
   
-
-
-# Combine all dataframes into one
-viz_df_line_master <- combined_df %>%
-  filter(player_id %in%  player_list)
-
-
-viz_df_line <- viz_df_line_master %>%
-                      filter(team_abbreviation == team_filter) 
   
-
-g2 <- ggplot(viz_df_line, aes(x = game_number, y = time_of_poss, group = player_id,
-                        color = team_color)) +
-  geom_line(size = 1.5) +
-  geom_point(size = 3) +
-  scale_color_identity() +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.border = element_blank(),
-        axis.line = element_line(colour = "black"))   +
-  geom_text(data = viz_df_line %>% filter(game_number == max(viz_df_line$game_number)),
-            aes(x = game_number , y = time_of_poss, fill=NULL,
-                label = player_name_last),
-            color='#404040',
-            size = 4, hjust = 0, 
-            position = position_nudge(x = 0.25, y = -0.125)) +
-  geom_from_path( data = viz_df_line %>% filter(game_number == max(viz_df_line$game_number)),
-             aes(x = game_number , y = time_of_poss, fill=NULL,
-                 path = player_headshot, color = NULL),
-             width = 0.1, height = 0.0735, position = position_nudge(x = 0.125, y = -.125), 
-             ) + 
-  labs(title=paste0("Who Had the Ball "),
-       subtitle = paste0(viz_df_bar$matchup[1], ", 2024"),
-       caption = 'Data: stats.nba.com via nba_api | Viz: @SaurabhOnTap') + 
-  theme_saurabh() +
-  xlab("") + 
-  ylab("Time on Ball (Min.)") +
-  coord_cartesian(xlim = c(1, length(unique(viz_df_line$game_number))*1.025),
-                  ylim = c(0, max(viz_df_line$time_of_poss)*1.025)
-  )
-
-
-
-
-ggsave(plot = g2, filename = paste0("Plots/", viz_df_line$team_name[1], " - ", viz_df_line$opp_name[1], " - Line.png"), 
-       height = 6, width = 6) 
-
+  ggsave(plot = g1, filename = paste0("Plots/", viz_df_bar$team_name[1], " - ", viz_df_bar$opp_name[1], " - Bar.png"), 
+    height = 6, width = 6) 
+  
+  
+  player_list <- combined_df %>%
+    group_by(game_id, team_id) %>%
+    arrange(-time_of_poss) %>%
+    slice(1:3) %>%
+    pull(player_id) %>%
+    unique()
+    
+  
+  
+  # Combine all dataframes into one
+  viz_df_line_master <- combined_df %>%
+    filter(player_id %in%  player_list)
+  
+  
+  viz_df_line <- viz_df_line_master %>%
+                        filter(team_abbreviation == team_filter) 
+    
+  
+  g2 <- ggplot(viz_df_line, aes(x = game_number, y = time_of_poss, group = player_id,
+                          color = team_color)) +
+    geom_line(size = 1.5) +
+    geom_point(size = 3) +
+    scale_color_identity() +
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          axis.line = element_line(colour = "black"))   +
+    geom_text(data = viz_df_line %>% filter(game_number == max(viz_df_line$game_number)),
+              aes(x = game_number , y = time_of_poss, fill=NULL,
+                  label = player_name_last),
+              color='#404040',
+              size = 4, hjust = 0, 
+              position = position_nudge(x = 0.25, y = -0.125)) +
+    geom_from_path( data = viz_df_line %>% filter(game_number == max(viz_df_line$game_number)),
+               aes(x = game_number , y = time_of_poss, fill=NULL,
+                   path = player_headshot, color = NULL),
+               width = 0.1, height = 0.0735, position = position_nudge(x = 0.125, y = -.125), 
+               ) + 
+    labs(title=paste0("Who Had the Ball "),
+         subtitle = paste0(viz_df_bar$matchup[1], ", 2024"),
+         caption = 'Data: stats.nba.com via nba_api | Viz: @SaurabhOnTap') + 
+    theme_saurabh() +
+    xlab("") + 
+    ylab("Time on Ball (Min.)") +
+    coord_cartesian(xlim = c(1, length(unique(viz_df_line$game_number))*1.025),
+                    ylim = c(0, max(viz_df_line$time_of_poss)*1.025)
+    )
+  
+  
+  
+  
+  ggsave(plot = g2, filename = paste0("Plots/", viz_df_line$team_name[1], " - ", viz_df_line$opp_name[1], " - Line.png"), 
+         height = 6, width = 6) 
+}
