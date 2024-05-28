@@ -4,7 +4,6 @@ library(hoopR)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-library(gganimate)
 library(stringr)
 library(png)
 library(ggimage)
@@ -12,6 +11,8 @@ library(magick)
 library(ggtext)
 library(extrafont)
 library(forcats)
+
+library(zoo)
 loadfonts(device="win")
 
 
@@ -23,7 +24,7 @@ theme_saurabh <- function () {
     plot.title=element_text(size=18, family = 'Roboto Black'),
     plot.subtitle=element_text(size=9, family = 'Roboto Slab'),
     plot.caption=element_text(size=6, family = 'Roboto Mono'),
-    axis.title =element_text(size=7, family = 'Roboto Mono'),
+    axis.title =element_text(size=10, family = 'Roboto Mono'),
     panel.background = element_blank(),
     
   )
@@ -36,6 +37,7 @@ theme_saurabh <- function () {
 gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_recent_nba_season() - 1),
                               season_type = 'Playoffs')[[1]] %>%
   filter(!is.na(WL))
+
 
 home_df <- gamelog %>%
   filter(grepl('vs.', MATCHUP)) %>%
@@ -107,11 +109,26 @@ for (season in seasons) {
   Sys.sleep(3)
 }
 
+# Create a dataframe with the new rows
+new_rows <- data.frame(
+  TEAM_ID = c(1610612750, 1610612742, 1610612738, 1610612754),
+  TEAM_ABBREVIATION = c("MIN", "DAL", "BOS", "IND"),
+  series_end = as.Date(c("2024-06-01", "2024-06-01", "2024-06-01", "2024-06-01")),
+  row = c(1, 2, 3, 4),
+  finals = c(0 , 0, 0, 0),
+  conf_finals = c(1, 1, 1, 1),
+  season = c(2024, 2024, 2024, 2024),
+  stringsAsFactors = FALSE
+)
+
 
 ##Window 5
 window = 5
 
-parity_f_df5 <- final_4 %>%
+
+final_4_manual <- rbind(final_4, new_rows)
+
+parity_f_df5 <- final_4_manual %>%
   arrange(season) %>%
   filter(finals == 1) %>%
   mutate(row = row_number()) %>%
@@ -120,12 +137,12 @@ parity_f_df5 <- final_4 %>%
          season_start = season,
          season_end = season + window - 1) %>%
   filter(row %% 2 == 1,
-         season_end <= 2023,
+         season_end <= 2024,
          season_start >= 1984) %>%
   select( season_end, unique_finalists_5)
 
 
-parity_cf_df5 <- final_4 %>%
+parity_cf_df5 <- final_4_manual %>%
   arrange(season) %>%
   mutate(row = row_number()) %>%
   mutate(unique_c_finalists_5 = rollapply(TEAM_ID, width= window*4, 
@@ -133,7 +150,7 @@ parity_cf_df5 <- final_4 %>%
          season_start = season,
          season_end = season + window - 1) %>%
   filter(row %% 4 == 1,
-         season_end <= 2023,
+         season_end <= 2024,
          season_start >= 1984) %>%
   select(season_end, unique_c_finalists_5)
 
@@ -141,7 +158,7 @@ parity_cf_df5 <- final_4 %>%
 ##Window 3
 window = 3
 
-parity_f_df3 <- final_4 %>%
+parity_f_df3 <- final_4_manual %>%
   arrange(season) %>%
   filter(finals == 1) %>%
   mutate(row = row_number()) %>%
@@ -150,12 +167,12 @@ parity_f_df3 <- final_4 %>%
          season_start = season,
          season_end = season + window - 1) %>%
   filter(row %% 2 == 1,
-         season_end <= 2023,
+         season_end <= 2024,
          season_start >= 1984) %>%
   select( season, season_start, season_end, unique_finalists_3)
 
 
-parity_cf_df3 <- final_4 %>%
+parity_cf_df3 <- final_4_manual %>%
   arrange(season) %>%
   mutate(row = row_number()) %>%
   mutate(unique_c_finalists_3 = rollapply(TEAM_ID, width= window*4, 
@@ -163,7 +180,7 @@ parity_cf_df3 <- final_4 %>%
          season_start = season,
          season_end = season + window - 1) %>%
   filter(row %% 4 == 1,
-         season_end <= 2023,
+         season_end <= 2024,
          season_start >= 1984) %>%
   select( season, season_start, season_end, unique_c_finalists_3)
 
@@ -177,7 +194,8 @@ parity_df <- parity_f_df3 %>%
   mutate(line_color = case_when(finals == 'unique_finalists_3' ~  '#AD002B',
                                 finals == 'unique_c_finalists_3' ~  '#ED003B',
                                 finals == 'unique_finalists_5' ~  '#006bb7',
-                                finals == 'unique_c_finalists_5' ~  '#4AAFF7'))
+                                finals == 'unique_c_finalists_5' ~  '#4AAFF7')) %>%
+  filter((finals != 'unique_finalists_5') | (season_end != 2024))
 
 
 
@@ -198,8 +216,8 @@ parity_df %>%
        caption = 'Data: stats.nba via HoopR | Viz: @SaurabhOnTap') + 
   theme(legend.position="none",
         axis.ticks.y = element_blank()) +
-  scale_y_continuous(limits = c(0, 16), breaks = c(0, 4, 8, 12, 16, 20))  +
-  scale_x_continuous( breaks = seq(1989, 2023, 3))
+  scale_y_continuous(limits = c(0, 15), breaks = seq(0, 15, 3))  +
+  scale_x_continuous(limits = c(2003, 2024),  breaks = seq(1999, 2024, 3))
 
 
 
@@ -227,5 +245,5 @@ parity_df %>%
 
 
 
-ggsave("parity.png", height = 6, width = 6) 
+ggsave("parity_2024.png", height = 6, width = 6) 
 
