@@ -1,4 +1,4 @@
-  library(hoopR)
+library(hoopR)
 
 
 library(dplyr)
@@ -8,18 +8,19 @@ library(stringr)
 library(ggimage)
 library(ggtext)
 library(extrafont)
+library(readr)
 
 
-
+season <- year_to_season(most_recent_nba_season() - 2)
 
 pull_matchup_box <- function(game_id){
   
   print(game_id)
-  pull_df <- rbind(nba_boxscorematchupsv3(game_id = game_id)[[1]], nba_boxscorematchupsv3(game_id = game_id)[[2]]) 
+  pull_df <- rbind(nba_boxscorematchupsv3(game_id = game_id, season = season)[[1]], nba_boxscorematchupsv3(game_id = game_id)[[2]]) 
   
   pull_df <- tryCatch(
     expr = {
-      rbind(nba_boxscorematchupsv3(game_id = game_id)[[1]], nba_boxscorematchupsv3(game_id = game_id)[[2]])
+      rbind(nba_boxscorematchupsv3(game_id = game_id, season = season)[[1]], nba_boxscorematchupsv3(game_id = game_id)[[2]])
     },
     error = function(e) {
       print("Error occurred while retrieving data from the API.")
@@ -49,7 +50,7 @@ pull_matchup_box <- function(game_id){
 }
 
 #Get List of Playoff Games
-gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_recent_nba_season() - 1),
+gamelog <-  nba_leaguegamelog(league_id = '00', season = season,
                               season_type = 'Playoffs')[[1]] %>%
   filter(!is.na(WL)) %>%
   select(GAME_ID, GAME_DATE)
@@ -60,7 +61,7 @@ raw_matchup_df <- do.call(rbind, lapply(unique(gamelog$GAME_ID), pull_matchup_bo
 
 #Join in helper columns
 
-team_colors <- read.csv('C:/Users/saurabh.rane/OneDrive - Slalom/NBA/data_update_scripts/Data/teamColors.csv') %>%
+team_colors <- read.csv('Data/teamColors.csv') %>%
   select(TEAM_ID, TEAM_NAME, TEAM_ABBREVIATION, Primary.Color)
 
 
@@ -73,40 +74,15 @@ matchup_df <- raw_matchup_df %>%
          DEF_PLAYER_NAME = str_replace_all(DEF_PLAYER_NAME, "[^[:alnum:][:space:]]", ""))
 
 
-sum(raw_matchup_df %>% filter(OFF_PLAYER_ID == 1629027, game_id == '0042200111') %>% pull(MATCHUP_MIN))
-
-sum(raw_matchup_df %>% filter(DEF_PLAYER_ID == 1629027, game_id == '0042200111') %>% pull(MATCHUP_MIN))
-
 saveRDS(matchup_df, "matchups.rds")
 
-
-gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_recent_nba_season() - 1),
-                              season_type = 'Playoffs')[[1]] %>% 
-  filter(!is.na(WL)) %>%
-  mutate(MATCHUP = str_replace_all(MATCHUP, c("@" = "vs.")))  %>%
-  select(GAME_ID, GAME_DATE, MATCHUP) %>%
-  group_by(GAME_ID) %>%
-  mutate(MATCHUP = max(MATCHUP)) %>%
-  ungroup() %>%
-  distinct(GAME_ID, .keep_all = TRUE) %>%
-  group_by(MATCHUP) %>%
-  arrange(MATCHUP,GAME_DATE) %>%
-  mutate(game_number = paste0("Game ", row_number())) %>%
-  ungroup() %>%
-  arrange(MATCHUP) %>%
-  mutate(version = format(Sys.time(), "%a %b %d %X"))
-
-
    
-
-
-saveRDS(gamelog, "gamelog.rds")
 
 
 
 ##Redoing Gamelog
 
-gamelog <-  nba_leaguegamelog(league_id = '00', season = year_to_season(most_recent_nba_season() - 1),
+gamelog <-  nba_leaguegamelog(league_id = '00', season = season,
                               season_type = 'Playoffs')[[1]] %>% 
   mutate(MATCHUP = str_replace_all(MATCHUP, c("@" = "vs.")))  %>%
   filter(!is.na(WL)) %>%
@@ -141,7 +117,8 @@ gamelog_enchanced <- gamelog %>%
               %>% rename('OPP_NAME' = 'TEAM_NAME', 'OPP_COLOR' = 'Primary.Color'),
             by = c('OPP_NAME'))  %>%
   group_by(TEAM_NAME, TEAM_ID) %>%
-  arrange(TEAM_NAME, round, game_number)
+  arrange(TEAM_NAME, round, game_number) %>%
+  mutate(season = season)
 
 
 
@@ -173,7 +150,8 @@ df <- matchup_df %>%
          OFF_PLAYER_HEADSHOT = paste0("https://cdn.nba.com/headshots/nba/latest/1040x760/", OFF_PLAYER_ID, ".png")) %>%
   inner_join(gamelog_enchanced %>% select(GAME_ID, TEAM_ID, MATCHUP, game_number, matchup_full) %>% mutate(TEAM_ID = as.integer(TEAM_ID)),
              by = c('game_id' = 'GAME_ID', 'off_team_id' = 'TEAM_ID')) %>%
-  inner_join(df_def, by = c('game_id', 'OFF_PLAYER_ID',  'def_team_id', 'DEF_PLAYER_ID'))
+  inner_join(df_def, by = c('game_id', 'OFF_PLAYER_ID',  'def_team_id', 'DEF_PLAYER_ID')) %>%
+  mutate(season = season)
 
 
 
@@ -185,6 +163,33 @@ df <- matchup_df %>%
 
 
 
-write.csv(df, "Data/matchups.csv")
-write.csv(gamelog_enchanced, "Data/gamelog.csv")
+write.csv(df, paste0("Data/matchups - ", season, ".csv"))
+write.csv(gamelog_enchanced, paste0("Data/gamelog - ", season, ".csv"))
+
+
+# List all files that start with "gamelog -" and end with ".csv"
+df_csv <- list.files("Data/", pattern = "matchups -.*\\.csv$", full.names = TRUE)
+
+# Read and combine all matching CSVs
+df_combined <- df_csv %>%
+  lapply(read_csv) %>%
+  bind_rows()
+
+
+
+write.csv(df_combined, paste0("Data/matchups.csv"))
+
+
+
+
+# List all files that start with "gamelog -" and end with ".csv"
+gamelog_csv <- list.files("Data/", pattern = "^gamelog -.*\\.csv$", full.names = TRUE)
+
+# Read and combine all matching CSVs
+gamelog_combined <- gamelog_csv %>%
+  lapply(read_csv) %>%
+  bind_rows()
+
+
+write.csv(gamelog_combined, paste0("Data/gamelog.csv"))
 
