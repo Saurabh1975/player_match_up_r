@@ -11,7 +11,7 @@ library(extrafont)
 library(readr)
 
 
-season <- year_to_season(most_recent_nba_season() - 2)
+season <- year_to_season(most_recent_nba_season() - 1)
 
 pull_matchup_box <- function(game_id){
   
